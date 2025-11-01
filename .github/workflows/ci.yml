@@ -100,7 +100,7 @@ jobs:
 
       - name: Creer fichier .env
         run: |
-          echo "API_GATEWAY_HOST=http://api-gateway:8080"
+          echo "API_GATEWAY_HOST=http://api-gateway:8080" >> .env
           echo "DB_HOST=mysql" >> .env
           echo "DB_PORT=3306" >> .env
           echo "DB_NAME=labo05_db" >> .env
