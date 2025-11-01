@@ -23,7 +23,7 @@ def test_health(client):
     assert result.status_code == 200
     assert result.get_json() == {'status':'ok'}
 
-@patch('requests.post')
+@patch('orders.write_order.requests.post')
 def test_stock_flow(mock_post, client):
     """Smoke test for complete stock management flow"""
     logger = Logger.get_instance("test")
