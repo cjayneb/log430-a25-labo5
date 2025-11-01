@@ -5,6 +5,9 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 
 import json
+from unittest.mock import Mock
+
+from requests import patch
 from logger import Logger
 import pytest
 from store_manager import app
@@ -20,9 +23,16 @@ def test_health(client):
     assert result.status_code == 200
     assert result.get_json() == {'status':'ok'}
 
-def test_stock_flow(client):
+@patch('requests.post')
+def test_stock_flow(mock_post, client):
     """Smoke test for complete stock management flow"""
     logger = Logger.get_instance("test")
+
+    # Create mock of payment service endpoints
+    fake_payment_response = Mock()
+    fake_payment_response.status_code = 200
+    fake_payment_response.json.return_value = { "payment_id": 4 }
+    mock_post.return_value = fake_payment_response
     
     # 1. Create a product (POST /products)
     product_data = {
@@ -86,6 +96,10 @@ def test_stock_flow(client):
     order_id = response.get_json()['order_id']
     assert order_id > 0
     logger.debug(f"Created order with ID: {order_id}")
+
+    mock_post.assert_called_once()
+    called_url = mock_post.call_args[0][0]
+    assert "/payments-api/payments" in called_url, f"Unexpected call URL: {called_url}"
     
     # 5. Verify stock again - should have 3 units (5 - 2) (GET /stocks/:id)
     response = client.get(f'/stocks/{product_id}')
