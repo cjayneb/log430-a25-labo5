@@ -4,7 +4,7 @@ SPDX - License - Identifier: LGPL - 3.0 - or -later
 Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 import json
-from config import API_GATEWAY_HOST
+import config
 from logger import Logger
 import requests
 from flask import request
@@ -114,7 +114,7 @@ def request_payment_link(order_id, total_amount, user_id):
     }
 
     # TODO: Requête à POST /payments
-    response_from_payment_service = requests.post(API_GATEWAY_HOST+'/payments-api/payments',
+    response_from_payment_service = requests.post(config.API_GATEWAY_HOST+'/payments-api/payments',
       json=payment_transaction,
       headers={'Content-Type': 'application/json'}
     )
@@ -124,7 +124,7 @@ def request_payment_link(order_id, total_amount, user_id):
         payment_id = response_from_payment_service.json()["payment_id"]
         print(f"ID paiement: {payment_id}")
 
-    return f"{API_GATEWAY_HOST}/payments-api/payments/process/{payment_id}" 
+    return f"{config.API_GATEWAY_HOST}/payments-api/payments/process/{payment_id}" 
 
 def delete_order(order_id: int):
     """Delete order in MySQL, keep Redis in sync"""
