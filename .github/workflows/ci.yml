@@ -98,6 +98,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Creer fichier .env
+        run: |
+          echo "API_GATEWAY_HOST=http://api-gateway:8080"
+          echo "DB_HOST=mysql" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_NAME=labo05_db" >> .env
+          echo "DB_USER=labo05" >> .env
+          echo "DB_PASSWORD=labo05" >> .env
+          echo "REDIS_HOST=redis" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "REDIS_DB=0" >> .env
+          cat .env
+
       - name: Create Docker network
         run: |
           docker compose down -v || true
