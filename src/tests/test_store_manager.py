@@ -5,9 +5,8 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 
 import json
-from unittest.mock import Mock
+from unittest.mock import patch, Mock
 
-from requests import patch
 from logger import Logger
 import pytest
 from store_manager import app
