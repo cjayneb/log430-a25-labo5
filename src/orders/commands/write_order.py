@@ -4,10 +4,8 @@ SPDX - License - Identifier: LGPL - 3.0 - or -later
 Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
 import json
-import config
-from logger import Logger
 import requests
-from flask import request
+from logger import Logger
 from orders.models.order import Order
 from stocks.models.product import Product
 from sqlalchemy.exc import SQLAlchemyError
@@ -66,15 +64,18 @@ def add_order(user_id: int, items: list):
             )
             session.add(order_item)
 
+        # NOTE: Le code permettant de mettre à jour le stock est commenté à dessein. 
+        # Dans Saga, nous effectuerons les mises à jour des stocks dans une étape distincte.
+
         # Update stock
-        check_out_items_from_stock(session, order_items)
+        #check_out_items_from_stock(session, order_items)
 
         session.commit()
         logger.debug("Une commande a été ajouté")
 
         # Insert order into Redis
-        update_stock_redis(order_items, '-')
-        add_order_to_redis(order_id, user_id, total_amount, items, new_order.payment_link)
+        #update_stock_redis(order_items, '-')
+        #add_order_to_redis(order_id, user_id, total_amount, items, new_order.payment_link)
         return order_id
 
     except Exception as e:
@@ -113,19 +114,20 @@ def request_payment_link(order_id, total_amount, user_id):
         "total_amount": total_amount
     }
 
-    # TODO: Requête à POST /payments
-    print(config.API_GATEWAY_HOST)
-    response_from_payment_service = requests.post(f"{config.API_GATEWAY_HOST}/payments-api/payments",
-      json=payment_transaction,
-      headers={'Content-Type': 'application/json'}
+    logger.debug("Requête à POST /payments")
+    response_from_payment_service = requests.post(
+        'http://api-gateway:8080/payments-api/payments',
+        json=payment_transaction,
+        headers={'Content-Type': 'application/json'}
     )
+    if response_from_payment_service.ok:
+        data = response_from_payment_service.json() 
+        payment_id = data['payment_id']
+        logger.debug(f"ID paiement: {payment_id}")
+    else:
+        logger.error("Erreur:", response_from_payment_service.status_code, response_from_payment_service.text)
 
-    if response_from_payment_service: # if response.ok
-        print(response_from_payment_service)
-        payment_id = response_from_payment_service.json()["payment_id"]
-        print(f"ID paiement: {payment_id}")
-
-    return f"{config.API_GATEWAY_HOST}/payments-api/payments/process/{payment_id}" 
+    return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}" 
 
 def delete_order(order_id: int):
     """Delete order in MySQL, keep Redis in sync"""
@@ -137,12 +139,12 @@ def delete_order(order_id: int):
             # MySQL
             order_items = session.query(OrderItem).filter(OrderItem.order_id == order_id).all()
             session.delete(order)
-            check_in_items_to_stock(session, order_items)
+            #check_in_items_to_stock(session, order_items)
             session.commit()
 
             # Redis
-            update_stock_redis(order_items, '+')
-            delete_order_from_redis(order_id)
+            #update_stock_redis(order_items, '+')
+            #delete_order_from_redis(order_id)
             return 1  
         else:
             return 0  
