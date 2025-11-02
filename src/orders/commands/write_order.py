@@ -52,7 +52,7 @@ def add_order(user_id: int, items: list):
 
         order_id = new_order.id
 
-        new_order.payment_link = request_payment_link(new_order.id, total_amount, user_id)
+        #new_order.payment_link = request_payment_link(new_order.id, total_amount, user_id)
         session.flush()  
         
         for item in order_items:
@@ -75,7 +75,7 @@ def add_order(user_id: int, items: list):
 
         # Insert order into Redis
         #update_stock_redis(order_items, '-')
-        #add_order_to_redis(order_id, user_id, total_amount, items, new_order.payment_link)
+        add_order_to_redis(order_id, user_id, total_amount, items, "")
         return order_id
 
     except Exception as e:

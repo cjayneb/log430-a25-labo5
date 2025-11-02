@@ -12,16 +12,35 @@ from orders.controllers.user_controller import create_user, remove_user, get_use
 from stocks.controllers.product_controller import create_product, remove_product, get_product
 from stocks.controllers.stock_controller import get_stock, populate_redis_on_startup, set_stock, get_stock_overview, update_stock
  
-# TODO: utilisez pour la config à Jaeger
-# from opentelemetry import trace
-# from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-# from opentelemetry.sdk.resources import Resource
-# from opentelemetry.sdk.trace import TracerProvider
-# from opentelemetry.sdk.trace.export import BatchSpanProcessor
-# from opentelemetry.instrumentation.flask import FlaskInstrumentor
-# from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 app = Flask(__name__)
+
+resource = Resource.create({
+   "service.name": "store-manager-service",
+   "service.version": "1.0.0"
+})
+
+trace.set_tracer_provider(TracerProvider(resource=resource))
+tracer = trace.get_tracer(__name__)
+
+# Indiquez l'endpoint Jaeger (hostname dans Docker)
+otlp_exporter = OTLPSpanExporter(
+   endpoint="http://jaeger:4317",
+   insecure=True
+)
+span_processor = BatchSpanProcessor(otlp_exporter)
+trace.get_tracer_provider().add_span_processor(span_processor)
+
+# Automatic Flask instrumentation
+FlaskInstrumentor().instrument_app(app)
+RequestsInstrumentor().instrument()
 
 # Auto-populate Redis 5s after API startup (to give enough time for the DB to start up as well)
 thread = threading.Timer(10.0, populate_redis_on_startup)
@@ -37,7 +56,8 @@ def health():
 @app.post('/orders')
 def post_orders():
     """Create a new order based on information on request body"""
-    return create_order(request)
+    with tracer.start_as_current_span("POST /store-manager-api/orders"):
+        return create_order(request)
 
 @app.delete('/orders/<int:order_id>')
 def delete_orders_id(order_id):
